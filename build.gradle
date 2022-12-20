@@ -1,0 +1,97 @@
+buildscript {
+    repositories {
+        jcenter()
+        mavenCentral()
+        maven {
+            url = "https://packages.confluent.io/maven"
+        }
+    }
+}
+
+plugins {
+    id 'java' // so that we can use 'implementation', 'testImplementation' for dependencies
+}
+
+apply plugin: 'java'
+
+repositories {
+    jcenter()
+    mavenCentral()
+    maven {
+        url = "https://packages.confluent.io/maven"
+    }
+    maven {
+        url = "https://jitpack.io"
+    }
+}
+
+dependencies {
+
+    // Kafka
+    implementation group: 'org.apache.kafka', name: 'connect-api', version: '3.3.1'
+    implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.14.1'
+    implementation 'com.github.jcustenborder.kafka.connect:connect-utils:0.7.173'
+    implementation 'com.github.jcustenborder.kafka.connect:kafka-connect-transform-common:0.1.0.14'
+
+    //test
+    testImplementation(platform('org.junit:junit-bom:5.9.0'))
+    testImplementation('org.junit.jupiter:junit-jupiter')
+    testImplementation("io.mockk:mockk:1.9.2")
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs = ["src/main/java"]
+        }
+
+        resources {
+            srcDirs = ["src/main/avro", "src/main/resources"]
+        }
+    }
+    test {
+        java {
+            srcDirs = ["src/test/java"]
+        }
+    }
+}
+
+test {
+    useJUnitPlatform()
+    testLogging {
+        events "passed", "skipped", "failed"
+    }
+}
+
+plugins.withId("com.github.johnrengelman.shadow"){
+
+    //this block requires the java plugin to be applied first.
+    plugins.withId("java"){
+
+        shadowJar {
+            //We are overriding the default jar to be the shadow jar
+            classifier = null
+            exclude 'META-INF'
+            exclude 'META-INF/*.INF'
+            exclude 'META-INF/license/*'
+        }
+
+        jar {
+            manifest {
+                attributes(
+                        'Built-By'       : System.properties['user.name'],
+                        'Build-Timestamp': new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ").format(new Date()),
+                        'Created-By'     : "Gradle ${gradle.gradleVersion}",
+                        'Build-Jdk'      : "${System.properties['java.version']} (${System.properties['java.vendor']} ${System.properties['java.vm.version']})",
+                        'Build-OS'       : "${System.properties['os.name']} ${System.properties['os.arch']} ${System.properties['os.version']}" ,
+                        'Main-Class'     : "com.zillow.com.zillow.avro.test.HelloWorld"
+                )
+            }
+        }
+
+        tasks.build.dependsOn tasks.shadowJar
+        tasks.shadowJar.mustRunAfter tasks.jar
+    }
+
+
+}

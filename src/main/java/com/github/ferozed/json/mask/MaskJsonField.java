@@ -1,0 +1,155 @@
+package com.github.ferozed.json.mask;
+
+import com.fasterxml.jackson.core.JsonPointer;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.TextNode;
+import com.github.jcustenborder.kafka.connect.transform.common.BaseTransformation;
+import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.connect.connector.ConnectRecord;
+import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.data.SchemaAndValue;
+import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.header.Headers;
+
+import java.util.Map;
+
+import static com.github.ferozed.json.mask.MaskJsonFieldConfig.CONNECT_FIELD_NAME;
+
+public class MaskJsonField<R extends ConnectRecord<R>> extends BaseTransformation<R> {
+
+    MaskJsonFieldConfig config;
+    String outerFieldPath;
+    String maskFieldName;
+    String connectFieldName;
+
+    /**
+     * Apply transformation to the {@code record} and return another record object (which may be {@code record} itself) or {@code null},
+     * corresponding to a map or filter operation respectively.
+     * <p>
+     * A transformation must not mutate objects reachable from the given {@code record}
+     * (including, but not limited to, {@link Headers Headers},
+     * {@link Struct Structs}, {@code Lists}, and {@code Maps}).
+     * If such objects need to be changed, a new ConnectRecord should be created and returned.
+     * <p>
+     * The implementation must be thread-safe.
+     *
+     * @param record
+     */
+    @Override
+    public R apply(R r) {
+        final SchemaAndValue transformed = process(r, r.valueSchema(), r.value());
+
+        return r.newRecord(
+                r.topic(),
+                r.kafkaPartition(),
+                r.keySchema(),
+                r.key(),
+                transformed.schema(),
+                transformed.value(),
+                r.timestamp()
+        );
+    }
+
+    /**
+     * Configuration specification for this transformation.
+     **/
+    @Override
+    public ConfigDef config() {
+        return MaskJsonFieldConfig.config();
+    }
+
+    /**
+     * Signal that this transformation instance will no longer will be used.
+     **/
+    @Override
+    public void close() {
+
+    }
+
+    /**
+     * Configure this class with the given key-value pairs
+     *
+     * @param configs
+     */
+    @Override
+    public void configure(Map<String, ?> configs) {
+        this.config = new MaskJsonFieldConfig(MaskJsonFieldConfig.config(), configs);
+        this.outerFieldPath = this.config.getString(MaskJsonFieldConfig.OUTER_FIELD_PATH);
+        this.maskFieldName = this.config.getString(MaskJsonFieldConfig.MASK_FIELD_NAME);
+        this.connectFieldName = this.config.getString(CONNECT_FIELD_NAME);
+    }
+
+    @Override
+    protected SchemaAndValue processString(ConnectRecord record, Schema inputSchema, String input) {
+        String value = (String)record.value();
+
+        Schema valueSchema = record.valueSchema();
+
+        String replacementString = replaceKeyInJsonString(value);
+
+        return new SchemaAndValue(Schema.STRING_SCHEMA, replacementString);
+
+    }
+
+    @Override
+    protected SchemaAndValue processStruct(ConnectRecord record, Schema inputSchema, Struct input) {
+        // get the json serialized field from connect record.
+
+        String [] tokens = connectFieldName.split("\\.");
+        String json = null;
+        Struct struct = input;
+        for(int i = 0; i < tokens.length; i++) {
+            String field = tokens[i];
+
+            if (i == tokens.length - 1) {
+                json = struct.getString(field);
+                String replacement = replaceKeyInJsonString(json);
+                struct.put(field, replacement);
+            } else {
+                struct = struct.getStruct(field);
+            }
+        }
+
+        if (json == null || json.trim().length() ==0) {
+            return new SchemaAndValue(inputSchema, input);
+        }
+
+        return new SchemaAndValue(inputSchema, input);
+    }
+
+    private String replaceKeyInJsonString(String jsonPayload) {
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode node = null;
+        try {
+            node = mapper.readTree(jsonPayload);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+
+        JsonPointer targetPointer = JsonPointer.compile(outerFieldPath);
+        JsonNode target = node.at(targetPointer);
+
+        // no match.
+        if (target == null) {
+            return jsonPayload;
+        }
+
+        if (target instanceof  ObjectNode) {
+            ObjectNode o = (ObjectNode) target;
+            o.put(this.maskFieldName, "");
+        }
+
+        String replacementString = null;
+        try {
+            replacementString = mapper.writeValueAsString(node);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+
+        return replacementString;
+    }
+
+}
