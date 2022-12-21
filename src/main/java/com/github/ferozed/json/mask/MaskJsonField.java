@@ -40,6 +40,8 @@ public class MaskJsonField<R extends ConnectRecord<R>> extends BaseTransformatio
     String maskFieldName;
     String connectFieldName;
 
+    static final ObjectMapper mapper = new ObjectMapper();
+
     /**
      * Apply transformation to the {@code record} and return another record object (which may be {@code record} itself) or {@code null},
      * corresponding to a map or filter operation respectively.
@@ -136,7 +138,6 @@ public class MaskJsonField<R extends ConnectRecord<R>> extends BaseTransformatio
     }
 
     private String replaceKeyInJsonString(String jsonPayload) {
-        ObjectMapper mapper = new ObjectMapper();
         JsonNode node = null;
         try {
             node = mapper.readTree(jsonPayload);
