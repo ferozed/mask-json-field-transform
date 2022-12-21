@@ -56,6 +56,105 @@ public class MaskJsonFieldTest {
     }
 
     @Test
+    public void testSimpleStrinWithoutReplacement() throws JsonProcessingException {
+        MaskJsonField maskJsonField = new MaskJsonField();
+        maskJsonField.configure(
+                ImmutableMap.of(
+                        MaskJsonFieldConfig.CONNECT_FIELD_NAME, "user_data",
+                        MaskJsonFieldConfig.OUTER_FIELD_PATH, "/foo",
+                        MaskJsonFieldConfig.MASK_FIELD_NAME, "bar"
+                )
+        );
+
+        Schema valueSchema = SchemaBuilder.STRING_SCHEMA;
+
+
+        ObjectNode node = (ObjectNode)mapper.createObjectNode();
+
+        String value = "{\"foo\":{\"nothing\":\"1\"}}";
+
+        SinkRecord sinkRecord = new SinkRecord(
+                "topic",
+                0,
+                SchemaBuilder.STRING_SCHEMA,
+                "key",
+                SchemaBuilder.STRING_SCHEMA,
+                value,
+                0
+        );
+
+        ConnectRecord transformedRecord = maskJsonField.apply(sinkRecord);
+
+        Assertions.assertEquals(value, (String)transformedRecord.value());
+    }
+
+    @Test
+    public void testInvalidJsonWithoutReplacement() throws JsonProcessingException {
+        MaskJsonField maskJsonField = new MaskJsonField();
+        maskJsonField.configure(
+                ImmutableMap.of(
+                        MaskJsonFieldConfig.CONNECT_FIELD_NAME, "user_data",
+                        MaskJsonFieldConfig.OUTER_FIELD_PATH, "/foo",
+                        MaskJsonFieldConfig.MASK_FIELD_NAME, "bar"
+                )
+        );
+
+        Schema valueSchema = SchemaBuilder.STRING_SCHEMA;
+
+
+        ObjectNode node = (ObjectNode)mapper.createObjectNode();
+
+        String value = "{";
+
+        SinkRecord sinkRecord = new SinkRecord(
+                "topic",
+                0,
+                SchemaBuilder.STRING_SCHEMA,
+                "key",
+                SchemaBuilder.STRING_SCHEMA,
+                value,
+                0
+        );
+
+        ConnectRecord transformedRecord = maskJsonField.apply(sinkRecord);
+
+        Assertions.assertEquals(value, (String)transformedRecord.value());
+    }
+
+    @Test
+    public void testEmptyJson() throws JsonProcessingException {
+        MaskJsonField maskJsonField = new MaskJsonField();
+        maskJsonField.configure(
+                ImmutableMap.of(
+                        MaskJsonFieldConfig.CONNECT_FIELD_NAME, "user_data",
+                        MaskJsonFieldConfig.OUTER_FIELD_PATH, "/foo",
+                        MaskJsonFieldConfig.MASK_FIELD_NAME, "bar"
+                )
+        );
+
+        Schema valueSchema = SchemaBuilder.STRING_SCHEMA;
+
+
+        ObjectNode node = (ObjectNode)mapper.createObjectNode();
+
+        String value = "{}";
+
+        SinkRecord sinkRecord = new SinkRecord(
+                "topic",
+                0,
+                SchemaBuilder.STRING_SCHEMA,
+                "key",
+                SchemaBuilder.STRING_SCHEMA,
+                value,
+                0
+        );
+
+        ConnectRecord transformedRecord = maskJsonField.apply(sinkRecord);
+
+        Assertions.assertEquals(value, (String)transformedRecord.value());
+    }
+
+    @Test
     public void testToplevelFieldInConnectStruct() throws JsonProcessingException {
         MaskJsonField maskJsonField = new MaskJsonField();
         maskJsonField.configure(
