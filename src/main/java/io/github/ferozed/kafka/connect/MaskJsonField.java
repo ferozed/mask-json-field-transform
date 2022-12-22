@@ -13,16 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.ferozed.json.mask;
+package io.github.ferozed.kafka.connect;
 
 import com.fasterxml.jackson.core.JsonPointer;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.databind.node.TextNode;
 import com.github.jcustenborder.kafka.connect.transform.common.BaseTransformation;
-import com.github.jcustenborder.kafka.connect.transform.common.ExtractNestedField;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.connector.ConnectRecord;
 import org.apache.kafka.connect.data.Schema;
@@ -32,7 +30,7 @@ import org.apache.kafka.connect.header.Headers;
 
 import java.util.Map;
 
-import static com.github.ferozed.json.mask.MaskJsonFieldConfig.CONNECT_FIELD_NAME;
+import static io.github.ferozed.kafka.connect.MaskJsonFieldConfig.CONNECT_FIELD_NAME;
 
 public class MaskJsonField<R extends ConnectRecord<R>> extends BaseTransformation<R> {
     MaskJsonFieldConfig config;
@@ -53,7 +51,7 @@ public class MaskJsonField<R extends ConnectRecord<R>> extends BaseTransformatio
      * <p>
      * The implementation must be thread-safe.
      *
-     * @param record
+     * @param r Connect Record
      */
     @Override
     public R apply(R r) {

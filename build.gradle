@@ -9,8 +9,12 @@ buildscript {
 
 plugins {
     id 'java' // so that we can use 'implementation', 'testImplementation' for dependencies
+    id 'maven-publish'
+    id 'signing'
 }
 
+apply plugin: 'maven-publish'
+apply plugin: 'signing'
 apply plugin: 'com.github.johnrengelman.shadow'
 
 repositories {
@@ -23,6 +27,9 @@ repositories {
         url = "https://jitpack.io"
     }
 }
+
+group = 'io.github.ferozed.kafka.connect'
+version = '0.1'
 
 dependencies {
 
@@ -62,6 +69,17 @@ test {
     }
 }
 
+
+task javadocJar(type: Jar) {
+    classifier = 'javadoc'
+    from javadoc
+}
+
+task sourcesJar(type: Jar) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
 plugins.withId("com.github.johnrengelman.shadow"){
 
     //this block requires the java plugin to be applied first.
@@ -89,7 +107,15 @@ plugins.withId("com.github.johnrengelman.shadow"){
 
         tasks.build.dependsOn tasks.shadowJar
         tasks.shadowJar.mustRunAfter tasks.jar
+        tasks.shadowJar.mustRunAfter tasks.javadocJar
+        tasks.shadowJar.mustRunAfter tasks.sourcesJar
     }
+}
 
+artifacts {
+    archives javadocJar, sourcesJar
+}
 
+signing {
+    sign configurations.archives
 }

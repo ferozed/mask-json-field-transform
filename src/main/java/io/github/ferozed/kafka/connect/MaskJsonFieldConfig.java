@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.ferozed.json.mask;
+package io.github.ferozed.kafka.connect;
 
 import com.github.jcustenborder.kafka.connect.utils.config.ConfigKeyBuilder;
 import org.apache.kafka.common.config.AbstractConfig;
@@ -30,7 +30,7 @@ public class MaskJsonFieldConfig extends AbstractConfig {
 
     /**
      * Construct a configuration with a ConfigDef and the configuration properties,
-     * which can include properties for zero or more {@link ConfigProvider}
+     * which can include properties for zero or more {@link ConfigDef}
      * that will be used to resolve variables in configuration property values.
      *
      * @param definition the definition of the configurations; may not be null
