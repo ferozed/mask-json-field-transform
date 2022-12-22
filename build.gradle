@@ -116,6 +116,42 @@ artifacts {
     archives javadocJar, sourcesJar
 }
 
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            pom {
+                name = 'Mask Json Field Transform'
+                description = 'A kafka connect transform to remove the value of a sensitive field in a json document.'
+                url = 'https://github.com/ferozed/mask-json-field-transform'
+                properties = [
+                        myProp: "value",
+                        "prop.with.dots": "anotherValue"
+                ]
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'ferozes'
+                        name = 'Feroze Daud'
+                        email = 'ferozed.oss@gmail.com'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:git@github.com:ferozed/mask-json-field-transform.git'
+                    developerConnection = 'scm:git:git@github.com:ferozed/mask-json-field-transform.git'
+                    url = 'https://github.com/ferozed/mask-json-field-transform'
+                }
+            }
+        }
+    }
+}
+
+/*
 signing {
     sign configurations.archives
 }
+*/
