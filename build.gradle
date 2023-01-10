@@ -80,6 +80,11 @@ task sourcesJar(type: Jar) {
     from sourceSets.main.allSource
 }
 
+tasks.withType(AbstractArchiveTask).configureEach {
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+}
+
 plugins.withId("com.github.johnrengelman.shadow"){
 
     //this block requires the java plugin to be applied first.
@@ -109,8 +114,15 @@ plugins.withId("com.github.johnrengelman.shadow"){
         tasks.shadowJar.mustRunAfter tasks.jar
         tasks.shadowJar.mustRunAfter tasks.javadocJar
         tasks.shadowJar.mustRunAfter tasks.sourcesJar
+
     }
 }
+
+signing {
+    sign configurations.archives
+}
+
+tasks.signArchives.dependsOn tasks.shadowJar
 
 artifacts {
     archives javadocJar, sourcesJar
@@ -149,9 +161,50 @@ publishing {
         }
     }
 }
-
 /*
-signing {
-    sign configurations.archives
+
+uploadArchives {
+    repositories {
+        mavenDeployer {
+            beforeDeployment { deployment -> signing.signPom(deployment) }
+
+            repository(url: "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/") {
+                authentication(userName: ossrhUsername, password: ossrhPassword)
+            }
+
+            snapshotRepository(url: "https://s01.oss.sonatype.org/content/repositories/snapshots/") {
+                authentication(userName: ossrhUsername, password: ossrhPassword)
+            }
+
+            pom.project {
+                name 'Example Application'
+                packaging 'jar'
+                // optionally artifactId can be defined here
+                description 'A kafka connect transform to remove the value of a sensitive field in a json document.'
+                url 'https://github.com/ferozed/mask-json-field-transform'
+
+                scm {
+                    connection 'scm:svn:http://foo.googlecode.com/svn/trunk/'
+                    developerConnection 'scm:svn:https://foo.googlecode.com/svn/trunk/'
+                    url 'https://github.com/ferozed/mask-json-field-transform'
+                }
+
+                licenses {
+                    license {
+                        name 'The Apache License, Version 2.0'
+                        url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+
+                developers {
+                    developer {
+                        id 'ferozed'
+                        name 'Feroze Daud'
+                        email 'ferozed.oss@gmail.com'
+                    }
+                }
+            }
+        }
+    }
 }
 */
