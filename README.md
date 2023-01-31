@@ -9,6 +9,7 @@ This jar contains a Kafka Connect Single Message Transform (SMT) implementation.
 There are two concrete subclasses depending on whether you want to use it on Key or Value:
 
 `io.github.ferozed.kafka.connect.transforms.MaskJsonField$Value` -> Use for operations on Kafka message values.
+
 `io.github.ferozed.kafka.connect.transforms.MaskJsonField$Key` -> Use for operation on Kafka message keys.
 
 It will then mask out a field from the payload and return it.
