@@ -8,8 +8,8 @@ This jar contains a Kafka Connect Single Message Transform (SMT) implementation.
 
 There are two concrete subclasses depending on whether you want to use it on Key or Value:
 
-`io.github.ferozed.kafka.connect.MaskJsonField.Value` -> Use for operations on Kafka message values.
-`io.github.ferozed.kafka.connect.MaskJsonField.Key` -> Use for operation on Kafka message keys.
+`io.github.ferozed.kafka.connect.transforms.MaskJsonField$Value` -> Use for operations on Kafka message values.
+`io.github.ferozed.kafka.connect.transforms.MaskJsonField$Key` -> Use for operation on Kafka message keys.
 
 It will then mask out a field from the payload and return it.
 
@@ -65,7 +65,7 @@ in the connect record, without using AVRO.
 
 ```
 "transforms": "mask_json_field",
-"transforms.mask_json_field.type": "io.github.ferozed.kafka.connect.MaskJsonField.Value",
+"transforms.mask_json_field.type": "io.github.ferozed.kafka.connect.transforms.MaskJsonField$Value",
 "transforms.mask_json_field.OUTER_FIELD_PATH": "",
 "transforms.mask_json_field.MASK_FIELD_NAME": "ssn",
 ```
@@ -89,7 +89,7 @@ in the connect record, without using AVRO.
 
 ```
 "transforms": "mask_json_field",
-"transforms.mask_json_field.type": "io.github.ferozed.kafka.connect.MaskJsonField.Value",
+"transforms.mask_json_field.type": "io.github.ferozed.kafka.connect.transforms.MaskJsonField$Value",
 "transforms.mask_json_field.OUTER_FIELD_PATH": "/user_info",
 "transforms.mask_json_field.MASK_FIELD_NAME": "ssn",
 ```
@@ -165,7 +165,7 @@ in the connect record, without using AVRO.
 
 ```
 "transforms": "mask_json_field",
-"transforms.mask_json_field.type": "io.github.ferozed.kafka.connect.MaskJsonField.Value",
+"transforms.mask_json_field.type": "io.github.ferozed.kafka.connect.transforms.MaskJsonField$Value",
 "transforms.mask_json_field.OUTER_FIELD_PATH": "",
 "transforms.mask_json_field.MASK_FIELD_NAME": "ssn",
 "transforms.mask_json_field.CONNECT_FIELD_NAME": "private_info.data"

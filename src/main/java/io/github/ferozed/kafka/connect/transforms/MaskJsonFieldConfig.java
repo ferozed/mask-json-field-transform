@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.github.ferozed.kafka.connect;
+package io.github.ferozed.kafka.connect.transforms;
 
 import com.github.jcustenborder.kafka.connect.utils.config.ConfigKeyBuilder;
 import org.apache.kafka.common.config.AbstractConfig;
