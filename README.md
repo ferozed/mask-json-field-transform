@@ -8,8 +8,8 @@ This jar contains a Kafka Connect Single Message Transform (SMT) implementation.
 
 There are two concrete subclasses depending on whether you want to use it on Key or Value:
 
-`com.github.ferozed.json.mask.MaskJsonField.Value` -> Use for operations on Kafka message values.
-`com.github.ferozed.json.mask.MaskJsonField.Key` -> Use for operation on Kafka message keys.
+`io.github.ferozed.kafka.connect.MaskJsonField.Value` -> Use for operations on Kafka message values.
+`io.github.ferozed.kafka.connect.MaskJsonField.Key` -> Use for operation on Kafka message keys.
 
 It will then mask out a field from the payload and return it.
 
@@ -165,13 +165,18 @@ in the connect record, without using AVRO.
 
 ```
 "transforms": "mask_json_field",
-"transforms.mask_json_field.type": "com.github.ferozed.json.mask.MaskJsonField",
+"transforms.mask_json_field.type": "io.github.ferozed.kafka.connect.MaskJsonField.Value",
 "transforms.mask_json_field.OUTER_FIELD_PATH": "",
 "transforms.mask_json_field.MASK_FIELD_NAME": "ssn",
 "transforms.mask_json_field.CONNECT_FIELD_NAME": "private_info.data"
 ```
 
 *INPUT*
+
+> This is not the actual JSON payload, but a JSON representation of the AVRO message in the topic.
+> 
+> The actual JSON payload is in `private_info.data` field of connect message.
+
 
 ```
 { 
