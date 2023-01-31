@@ -80,6 +80,11 @@ task sourcesJar(type: Jar) {
     from sourceSets.main.allSource
 }
 
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
 tasks.withType(AbstractArchiveTask).configureEach {
     preserveFileTimestamps = false
     reproducibleFileOrder = true
@@ -156,7 +161,9 @@ publishing {
     repositories {
         maven {
             name = "OSSRH"
-            url = "https://s01.oss.sonatype.org/content/repositories/snapshots/"
+            def release_url = "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
+            def snapshot_url = "https://s01.oss.sonatype.org/content/repositories/snapshots/"
+            url = version.endsWith('SNAPSHOT') ? snapshot_url : release_url
             credentials {
                 username = project.ossrhUsername
                 password = project.ossrhPassword
