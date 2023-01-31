@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.github.ferozed.kafka.connect;
+package io.github.ferozed.kafka.connect.transforms;
 
 import com.fasterxml.jackson.core.JsonPointer;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -21,8 +21,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableMap;
-import io.github.ferozed.kafka.connect.MaskJsonField;
-import io.github.ferozed.kafka.connect.MaskJsonFieldConfig;
 import org.apache.kafka.connect.connector.ConnectRecord;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
@@ -37,7 +35,7 @@ public class MaskJsonFieldTest {
 
     @Test
     public void testSimpleStringInValue() throws JsonProcessingException {
-        MaskJsonField maskJsonField = new MaskJsonField(false);
+        MaskJsonField maskJsonField = new MaskJsonField.Value();
         maskJsonField.configure(
                 ImmutableMap.of(
                         MaskJsonFieldConfig.OUTER_FIELD_PATH, "/foo",
@@ -73,7 +71,7 @@ public class MaskJsonFieldTest {
 
     @Test
     public void testSimpleStringInKey() throws JsonProcessingException {
-        MaskJsonField maskJsonField = new MaskJsonField(true);
+        MaskJsonField maskJsonField = new MaskJsonField.Key();
         maskJsonField.configure(
                 ImmutableMap.of(
                         MaskJsonFieldConfig.OUTER_FIELD_PATH, "/foo",
@@ -111,7 +109,7 @@ public class MaskJsonFieldTest {
 
     @Test
     public void testSimpleStrinWithoutReplacement() throws JsonProcessingException {
-        MaskJsonField maskJsonField = new MaskJsonField(false);
+        MaskJsonField maskJsonField = new MaskJsonField.Value();
         maskJsonField.configure(
                 ImmutableMap.of(
                         MaskJsonFieldConfig.OUTER_FIELD_PATH, "/foo",
@@ -143,7 +141,7 @@ public class MaskJsonFieldTest {
 
     @Test
     public void testInvalidJsonWithoutReplacement() throws JsonProcessingException {
-        MaskJsonField maskJsonField = new MaskJsonField(false);
+        MaskJsonField maskJsonField = new MaskJsonField.Value();
         maskJsonField.configure(
                 ImmutableMap.of(
                         MaskJsonFieldConfig.OUTER_FIELD_PATH, "/foo",
@@ -175,7 +173,7 @@ public class MaskJsonFieldTest {
 
     @Test
     public void testEmptyJson() throws JsonProcessingException {
-        MaskJsonField maskJsonField = new MaskJsonField(false);
+        MaskJsonField maskJsonField = new MaskJsonField.Value();
         maskJsonField.configure(
                 ImmutableMap.of(
                         MaskJsonFieldConfig.OUTER_FIELD_PATH, "/foo",
@@ -218,7 +216,7 @@ public class MaskJsonFieldTest {
     @Test
 
     private void testToplevelFieldInConnectStructLib(boolean isKey) throws JsonProcessingException {
-        MaskJsonField maskJsonField = new MaskJsonField(isKey);
+        MaskJsonField maskJsonField = isKey ? new MaskJsonField.Key() : new MaskJsonField.Value();
         maskJsonField.configure(
                 ImmutableMap.of(
                         MaskJsonFieldConfig.CONNECT_FIELD_NAME, "document",
@@ -273,7 +271,7 @@ public class MaskJsonFieldTest {
 
     @Test
     public void testNestedFieldInConnectStruct() throws JsonProcessingException {
-        MaskJsonField maskJsonField = new MaskJsonField(false);
+        MaskJsonField maskJsonField = new MaskJsonField.Value();
         maskJsonField.configure(
                 ImmutableMap.of(
                         MaskJsonFieldConfig.CONNECT_FIELD_NAME, "inner.document",

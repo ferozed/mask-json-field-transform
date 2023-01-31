@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.github.ferozed.kafka.connect;
+package io.github.ferozed.kafka.connect.transforms;
 
 import com.fasterxml.jackson.core.JsonPointer;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -30,7 +30,7 @@ import org.apache.kafka.connect.header.Headers;
 
 import java.util.Map;
 
-import static io.github.ferozed.kafka.connect.MaskJsonFieldConfig.CONNECT_FIELD_NAME;
+import static io.github.ferozed.kafka.connect.transforms.MaskJsonFieldConfig.CONNECT_FIELD_NAME;
 
 public class MaskJsonField<R extends ConnectRecord<R>> extends BaseTransformation<R> {
     MaskJsonFieldConfig config;
@@ -42,7 +42,7 @@ public class MaskJsonField<R extends ConnectRecord<R>> extends BaseTransformatio
 
     static final ObjectMapper mapper = new ObjectMapper();
 
-    public MaskJsonField(Boolean isKey) {
+    private MaskJsonField(Boolean isKey) {
         this.isKey = isKey;
     }
 
@@ -201,13 +201,13 @@ public class MaskJsonField<R extends ConnectRecord<R>> extends BaseTransformatio
         return replacementString;
     }
 
-    public class Key<R extends ConnectRecord<R>> extends MaskJsonField<R> {
+    public static class Key<R extends ConnectRecord<R>> extends MaskJsonField<R> {
         public Key() {
             super(true);
         }
     }
 
-    public class Value<R extends ConnectRecord<R>> extends MaskJsonField<R> {
+    public static class Value<R extends ConnectRecord<R>> extends MaskJsonField<R> {
         public Value() {
             super(false);
         }
