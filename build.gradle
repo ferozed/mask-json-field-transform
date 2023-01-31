@@ -29,7 +29,7 @@ repositories {
 }
 
 group = 'io.github.ferozed.kafka.connect'
-version = '0.1'
+version = '0.1-SNAPSHOT'
 
 dependencies {
 
@@ -92,7 +92,7 @@ plugins.withId("com.github.johnrengelman.shadow"){
 
         shadowJar {
             //We are overriding the default jar to be the shadow jar
-            classifier = null
+            classifier = "shadow"
             exclude 'META-INF'
             exclude 'META-INF/*.INF'
             exclude 'META-INF/license/*'
@@ -118,19 +118,10 @@ plugins.withId("com.github.johnrengelman.shadow"){
     }
 }
 
-signing {
-    sign configurations.archives
-}
-
-tasks.signArchives.dependsOn tasks.shadowJar
-
-artifacts {
-    archives javadocJar, sourcesJar
-}
-
 publishing {
     publications {
         mavenJava(MavenPublication) {
+            from components.java
             pom {
                 name = 'Mask Json Field Transform'
                 description = 'A kafka connect transform to remove the value of a sensitive field in a json document.'
@@ -160,51 +151,27 @@ publishing {
             }
         }
     }
-}
-/*
 
-uploadArchives {
+
     repositories {
-        mavenDeployer {
-            beforeDeployment { deployment -> signing.signPom(deployment) }
-
-            repository(url: "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/") {
-                authentication(userName: ossrhUsername, password: ossrhPassword)
-            }
-
-            snapshotRepository(url: "https://s01.oss.sonatype.org/content/repositories/snapshots/") {
-                authentication(userName: ossrhUsername, password: ossrhPassword)
-            }
-
-            pom.project {
-                name 'Example Application'
-                packaging 'jar'
-                // optionally artifactId can be defined here
-                description 'A kafka connect transform to remove the value of a sensitive field in a json document.'
-                url 'https://github.com/ferozed/mask-json-field-transform'
-
-                scm {
-                    connection 'scm:svn:http://foo.googlecode.com/svn/trunk/'
-                    developerConnection 'scm:svn:https://foo.googlecode.com/svn/trunk/'
-                    url 'https://github.com/ferozed/mask-json-field-transform'
-                }
-
-                licenses {
-                    license {
-                        name 'The Apache License, Version 2.0'
-                        url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
-                    }
-                }
-
-                developers {
-                    developer {
-                        id 'ferozed'
-                        name 'Feroze Daud'
-                        email 'ferozed.oss@gmail.com'
-                    }
-                }
+        maven {
+            name = "OSSRH"
+            url = "https://s01.oss.sonatype.org/content/repositories/snapshots/"
+            credentials {
+                username = project.ossrhUsername
+                password = project.ossrhPassword
             }
         }
     }
 }
-*/
+
+signing {
+    //sign configurations.archives
+    sign publishing.publications.mavenJava
+}
+
+//tasks.signArchives.dependsOn tasks.shadowJar
+
+artifacts {
+    archives javadocJar, sourcesJar
+}
