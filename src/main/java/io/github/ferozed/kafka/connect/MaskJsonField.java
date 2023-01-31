@@ -38,7 +38,13 @@ public class MaskJsonField<R extends ConnectRecord<R>> extends BaseTransformatio
     String maskFieldName;
     String connectFieldName;
 
+    private Boolean isKey;
+
     static final ObjectMapper mapper = new ObjectMapper();
+
+    public MaskJsonField(Boolean isKey) {
+        this.isKey = isKey;
+    }
 
     /**
      * Apply transformation to the {@code record} and return another record object (which may be {@code record} itself) or {@code null},
@@ -55,17 +61,32 @@ public class MaskJsonField<R extends ConnectRecord<R>> extends BaseTransformatio
      */
     @Override
     public R apply(R r) {
-        final SchemaAndValue transformed = process(r, r.valueSchema(), r.value());
 
-        return r.newRecord(
-                r.topic(),
-                r.kafkaPartition(),
-                r.keySchema(),
-                r.key(),
-                transformed.schema(),
-                transformed.value(),
-                r.timestamp()
-        );
+        if (isKey) {
+            final SchemaAndValue transformed = process(r, r.keySchema(), r.key());
+
+            return r.newRecord(
+                    r.topic(),
+                    r.kafkaPartition(),
+                    transformed.schema(),
+                    transformed.value(),
+                    r.valueSchema(),
+                    r.value(),
+                    r.timestamp()
+            );
+        } else {
+            final SchemaAndValue transformed = process(r, r.valueSchema(), r.value());
+
+            return r.newRecord(
+                    r.topic(),
+                    r.kafkaPartition(),
+                    r.keySchema(),
+                    r.key(),
+                    transformed.schema(),
+                    transformed.value(),
+                    r.timestamp()
+            );
+        }
     }
 
     /**
@@ -99,13 +120,23 @@ public class MaskJsonField<R extends ConnectRecord<R>> extends BaseTransformatio
 
     @Override
     protected SchemaAndValue processString(ConnectRecord record, Schema inputSchema, String input) {
-        String value = (String)record.value();
+        if (isKey) {
+            String value = (String) record.key();
 
-        Schema valueSchema = record.valueSchema();
+            Schema valueSchema = record.keySchema();
 
-        String replacementString = replaceKeyInJsonString(value);
+            String replacementString = replaceKeyInJsonString(value);
 
-        return new SchemaAndValue(Schema.STRING_SCHEMA, replacementString);
+            return new SchemaAndValue(Schema.STRING_SCHEMA, replacementString);
+        } else {
+            String value = (String) record.value();
+
+            Schema valueSchema = record.valueSchema();
+
+            String replacementString = replaceKeyInJsonString(value);
+
+            return new SchemaAndValue(Schema.STRING_SCHEMA, replacementString);
+        }
 
     }
 
@@ -168,6 +199,18 @@ public class MaskJsonField<R extends ConnectRecord<R>> extends BaseTransformatio
         }
 
         return replacementString;
+    }
+
+    public class Key<R extends ConnectRecord<R>> extends MaskJsonField<R> {
+        public Key() {
+            super(true);
+        }
+    }
+
+    public class Value<R extends ConnectRecord<R>> extends MaskJsonField<R> {
+        public Value() {
+            super(false);
+        }
     }
 
 }

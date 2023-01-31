@@ -61,8 +61,8 @@ public class MaskJsonFieldConfig extends AbstractConfig {
                 .define(
                         ConfigKeyBuilder.of(CONNECT_FIELD_NAME, ConfigDef.Type.STRING)
                                 .documentation("Connect field that has the json string")
-                                .validator(new ConfigDef.NonEmptyString())
-                                .importance(ConfigDef.Importance.HIGH)
+                                .importance(ConfigDef.Importance.LOW)
+                                .defaultValue("")
                                 .build()
                 );
     }

@@ -6,6 +6,11 @@ This jar contains a Kafka Connect Single Message Transform (SMT) implementation.
 
 `MaskJsonField` transform will read a JSON payload from a connect field.
 
+There are two concrete subclasses depending on whether you want to use it on Key or Value:
+
+`io.github.ferozed.kafka.connect.MaskJsonField.Value` -> Use for operations on Kafka message values.
+`io.github.ferozed.kafka.connect.MaskJsonField.Key` -> Use for operation on Kafka message keys.
+
 It will then mask out a field from the payload and return it.
 
 For eg:
@@ -40,7 +45,7 @@ The name of the field in the connect record from which the JSON payload needs to
 
 > CONNECT_FIELD_NAME is optional. It is only specified for struct types, i.e when the data is in AVRO format.
 > 
-> If the data is in STRING format, then it is not used. In that case it should be set to empty sring.
+> If the data is in STRING format, then it is not used.
 
 # Examples
 
@@ -60,10 +65,9 @@ in the connect record, without using AVRO.
 
 ```
 "transforms": "mask_json_field",
-"transforms.mask_json_field.type": "com.github.ferozed.json.mask.MaskJsonField",
+"transforms.mask_json_field.type": "io.github.ferozed.kafka.connect.MaskJsonField.Value",
 "transforms.mask_json_field.OUTER_FIELD_PATH": "",
 "transforms.mask_json_field.MASK_FIELD_NAME": "ssn",
-"transforms.mask_json_field.CONNECT_FIELD_NAME": ""
 ```
 
 *INPUT*
@@ -85,10 +89,9 @@ in the connect record, without using AVRO.
 
 ```
 "transforms": "mask_json_field",
-"transforms.mask_json_field.type": "com.github.ferozed.json.mask.MaskJsonField",
+"transforms.mask_json_field.type": "io.github.ferozed.kafka.connect.MaskJsonField.Value",
 "transforms.mask_json_field.OUTER_FIELD_PATH": "/user_info",
 "transforms.mask_json_field.MASK_FIELD_NAME": "ssn",
-"transforms.mask_json_field.CONNECT_FIELD_NAME": ""
 ```
 
 *INPUT*
@@ -162,13 +165,18 @@ in the connect record, without using AVRO.
 
 ```
 "transforms": "mask_json_field",
-"transforms.mask_json_field.type": "com.github.ferozed.json.mask.MaskJsonField",
+"transforms.mask_json_field.type": "io.github.ferozed.kafka.connect.MaskJsonField.Value",
 "transforms.mask_json_field.OUTER_FIELD_PATH": "",
 "transforms.mask_json_field.MASK_FIELD_NAME": "ssn",
 "transforms.mask_json_field.CONNECT_FIELD_NAME": "private_info.data"
 ```
 
 *INPUT*
+
+> This is not the actual JSON payload, but a JSON representation of the AVRO message in the topic.
+> 
+> The actual JSON payload is in `private_info.data` field of connect message.
+
 
 ```
 { 
