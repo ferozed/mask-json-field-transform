@@ -43,10 +43,9 @@ This was tested using a simple FileSink connector:
     "tasks.max": 1,
     "topics": "json-topic",
     "transforms": "mask_json_field",
-    "transforms.mask_json_field.type": "com.github.ferozed.json.mask.MaskJsonField",
+    "transforms.mask_json_field.type": "io.github.ferozed.kafka.connect.transforms.MaskJsonField$Value",
     "transforms.mask_json_field.OUTER_FIELD_PATH": "",
     "transforms.mask_json_field.MASK_FIELD_NAME": "ssn",
-    "transforms.mask_json_field.CONNECT_FIELD_NAME": "document",
 
     "errors.tolerance": "all"
 
