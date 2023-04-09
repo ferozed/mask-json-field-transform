@@ -376,4 +376,9 @@ public class MaskJsonFieldTest {
         System.out.printf("targetNode: %s\n", mapper.writeValueAsString(targetNode));
 
     }
+
+    @Test
+    public void classLoadTest() throws ClassNotFoundException {
+        Class clazz = Class.forName("io.github.ferozed.kafka.connect.transforms.MaskJsonField$Value");
+    }
 }

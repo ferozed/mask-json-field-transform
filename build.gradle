@@ -7,6 +7,8 @@ buildscript {
     }
 }
 
+import com.github.jengelman.gradle.plugins.shadow.tasks.ConfigureShadowRelocation
+
 plugins {
     id 'java' // so that we can use 'implementation', 'testImplementation' for dependencies
     id 'maven-publish'
@@ -34,7 +36,7 @@ version = '0.1-SNAPSHOT'
 dependencies {
 
     // Kafka
-    implementation group: 'org.apache.kafka', name: 'connect-api', version: '3.3.1'
+    compileOnly group: 'org.apache.kafka', name: 'connect-api', version: '3.3.1'
     implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.14.1'
     implementation 'com.github.jcustenborder.kafka.connect:connect-utils:0.7.173'
     implementation 'com.github.jcustenborder.kafka.connect:kafka-connect-transform-common:0.1.0.14'
@@ -42,7 +44,7 @@ dependencies {
     //test
     testImplementation(platform('org.junit:junit-bom:5.9.0'))
     testImplementation('org.junit.jupiter:junit-jupiter')
-    testImplementation("io.mockk:mockk:1.9.2")
+    testImplementation group: 'org.apache.kafka', name: 'connect-api', version: '3.3.1'
 }
 
 sourceSets {
@@ -101,6 +103,12 @@ plugins.withId("com.github.johnrengelman.shadow"){
             exclude 'META-INF'
             exclude 'META-INF/*.INF'
             exclude 'META-INF/license/*'
+            exclude 'org/apache/*'
+
+            dependencies {
+                exclude(dependency('org.apache.kafka:connect-api:3.3.1'))
+                exclude(dependency('org.apache.kafka:kafka-clients:3.3.1'))
+            }
         }
 
         jar {
@@ -116,6 +124,15 @@ plugins.withId("com.github.johnrengelman.shadow"){
         }
 
         tasks.build.dependsOn tasks.shadowJar
+
+        task relocateShadowJar(type: ConfigureShadowRelocation) {
+            target = tasks.shadowJar
+            prefix = "myapp" // Default value is "shadow"
+
+        }
+
+        tasks.shadowJar.dependsOn tasks.relocateShadowJar
+
         tasks.shadowJar.mustRunAfter tasks.jar
         tasks.shadowJar.mustRunAfter tasks.javadocJar
         tasks.shadowJar.mustRunAfter tasks.sourcesJar
