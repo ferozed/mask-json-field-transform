@@ -13,12 +13,18 @@ All new work should be done in a feature branch, against the next snapshot build
 
 ## Prerequisites
 
-Publication can only be done by the Owner.
+Publication can only be done by the Owner. We first publish to sonatype staging repository,
+and then promote to release repo manually.
+
+## Publish to staging repo
 
 ```bash
 ./gradlew clean build publish
 ```
 
+## Promote to release
+
+Follow instructions in [Releasing](https://central.sonatype.org/publish/release/#deployment) section of OSSRH documentation.
 
 # Testing
 
