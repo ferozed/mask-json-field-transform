@@ -52,10 +52,6 @@ sourceSets {
         java {
             srcDirs = ["src/main/java"]
         }
-
-        resources {
-            srcDirs = ["src/main/avro", "src/main/resources"]
-        }
     }
     test {
         java {
