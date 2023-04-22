@@ -19,7 +19,7 @@ import com.fasterxml.jackson.core.JsonPointer;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.*;
 import com.github.jcustenborder.kafka.connect.transform.common.BaseTransformation;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.connector.ConnectRecord;
@@ -28,14 +28,15 @@ import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.header.Headers;
 
+import java.io.IOException;
+import java.math.BigInteger;
 import java.util.Map;
 
-import static io.github.ferozed.kafka.connect.transforms.MaskJsonFieldConfig.CONNECT_FIELD_NAME;
+import static io.github.ferozed.kafka.connect.transforms.MaskJsonFieldConfig.*;
 
 public class MaskJsonField<R extends ConnectRecord<R>> extends BaseTransformation<R> {
     MaskJsonFieldConfig config;
-    String outerFieldPath;
-    String maskFieldName;
+    String replacementFieldPath;
     String connectFieldName;
 
     private Boolean isKey;
@@ -113,8 +114,7 @@ public class MaskJsonField<R extends ConnectRecord<R>> extends BaseTransformatio
     @Override
     public void configure(Map<String, ?> configs) {
         this.config = new MaskJsonFieldConfig(MaskJsonFieldConfig.config(), configs);
-        this.outerFieldPath = this.config.getString(MaskJsonFieldConfig.OUTER_FIELD_PATH);
-        this.maskFieldName = this.config.getString(MaskJsonFieldConfig.MASK_FIELD_NAME);
+        this.replacementFieldPath = this.config.getString(MaskJsonFieldConfig.REPLACEMENT_FIELD_PATH);
         this.connectFieldName = this.config.getString(CONNECT_FIELD_NAME);
     }
 
@@ -125,7 +125,7 @@ public class MaskJsonField<R extends ConnectRecord<R>> extends BaseTransformatio
 
             Schema valueSchema = record.keySchema();
 
-            String replacementString = replaceKeyInJsonString(value);
+            String replacementString = replaceJsonWithPath(value, this.replacementFieldPath);
 
             return new SchemaAndValue(Schema.STRING_SCHEMA, replacementString);
         } else {
@@ -133,7 +133,7 @@ public class MaskJsonField<R extends ConnectRecord<R>> extends BaseTransformatio
 
             Schema valueSchema = record.valueSchema();
 
-            String replacementString = replaceKeyInJsonString(value);
+            String replacementString = replaceJsonWithPath(value, this.replacementFieldPath);
 
             return new SchemaAndValue(Schema.STRING_SCHEMA, replacementString);
         }
@@ -152,7 +152,7 @@ public class MaskJsonField<R extends ConnectRecord<R>> extends BaseTransformatio
 
             if (i == tokens.length - 1) {
                 json = struct.getString(field);
-                String replacement = replaceKeyInJsonString(json);
+                String replacement = replaceJsonWithPath(json, this.replacementFieldPath);
                 struct.put(field, replacement);
             } else {
                 struct = struct.getStruct(field);
@@ -166,39 +166,59 @@ public class MaskJsonField<R extends ConnectRecord<R>> extends BaseTransformatio
         return new SchemaAndValue(inputSchema, input);
     }
 
-    private String replaceKeyInJsonString(String jsonPayload) {
-        JsonNode node = null;
+    private String replaceJsonWithPath(
+            String payload,
+            String path
+    ) {
         try {
-            node = mapper.readTree(jsonPayload);
-        } catch (JsonProcessingException e) {
-            // error parsing json. return it as it is.
-            return jsonPayload;
+            JsonNode replacementNode = replaceWithPointer(payload, path);
+            return mapper.writeValueAsString(replacementNode);
+        } catch (IOException e) {
+            return payload;
+        }
+    }
+
+    private JsonNode replaceWithPointer(
+            String payload,
+            String path
+    ) throws IOException {
+        JsonPointer pointer = JsonPointer.compile(path);
+
+        JsonNode root = null;
+        root = mapper.readTree(payload);
+
+        JsonNode targetNode = root.at(pointer);
+
+        if(targetNode.isMissingNode()) {
+            throw new IOException("Pointer did not match");
+        }
+        JsonNode parentNode = root.at(pointer.head());
+
+        JsonNode replacementNode = null;
+        if (targetNode.isTextual()) {
+            replacementNode = TextNode.valueOf(config.getString(REPLACEMENT_VALUE_STRING));
+        } else if (targetNode.isInt()) {
+            replacementNode = IntNode.valueOf(config.getInt(REPLACEMENT_VALUE_INT));
+        } else if (targetNode.isLong()) {
+            replacementNode = LongNode.valueOf(config.getLong(REPLACEMENT_VALUE_LONG));
+        } else if (targetNode.isBigInteger()) {
+            BigInteger bi = BigInteger.valueOf(config.getInt(REPLACEMENT_VALUE_INT));
+            replacementNode = BigIntegerNode.valueOf(bi);
+        } else if (targetNode.isFloat()) {
+            replacementNode = FloatNode.valueOf(config.getDouble(REPLACEMENT_VALUE_INT).floatValue());
+        } else if (targetNode.isDouble()) {
+            replacementNode = DoubleNode.valueOf(config.getDouble(REPLACEMENT_VALUE_DOUBLE));
+        } else if (targetNode.isArray()) {
+            replacementNode = mapper.createArrayNode();
         }
 
-        JsonPointer targetPointer = JsonPointer.compile(outerFieldPath);
-        JsonNode target = node.at(targetPointer);
-
-        // no match.
-        if (target == null) {
-            return jsonPayload;
+        if (parentNode.isObject()) {
+            ((ObjectNode)parentNode).set(pointer.last().getMatchingProperty(), replacementNode);
+        } else if (parentNode.isArray()) {
+            ((ArrayNode)parentNode).set(pointer.last().getMatchingIndex(), replacementNode);
         }
 
-        if (target instanceof  ObjectNode) {
-            ObjectNode o = (ObjectNode) target;
-            // replace it only if the field already exists.
-            if (o.has(this.maskFieldName)) {
-                o.put(this.maskFieldName, "");
-            }
-        }
-
-        String replacementString = null;
-        try {
-            replacementString = mapper.writeValueAsString(node);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
-
-        return replacementString;
+        return root;
     }
 
     public static class Key<R extends ConnectRecord<R>> extends MaskJsonField<R> {

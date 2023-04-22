@@ -19,7 +19,7 @@ import com.fasterxml.jackson.core.JsonPointer;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.*;
 import com.google.common.collect.ImmutableMap;
 import org.apache.kafka.connect.connector.ConnectRecord;
 import org.apache.kafka.connect.data.Schema;
@@ -28,6 +28,11 @@ import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import java.io.IOException;
+import java.math.BigInteger;
+import java.util.HashMap;
+import java.util.Map;
 
 public class MaskJsonFieldTest {
 
@@ -38,8 +43,7 @@ public class MaskJsonFieldTest {
         MaskJsonField maskJsonField = new MaskJsonField.Value();
         maskJsonField.configure(
                 ImmutableMap.of(
-                        MaskJsonFieldConfig.OUTER_FIELD_PATH, "/foo",
-                        MaskJsonFieldConfig.MASK_FIELD_NAME, "bar"
+                        MaskJsonFieldConfig.REPLACEMENT_FIELD_PATH, "/foo/bar"
                 )
         );
 
@@ -66,7 +70,7 @@ public class MaskJsonFieldTest {
 
         ConnectRecord transformedRecord = maskJsonField.apply(sinkRecord);
 
-        assertStringValue((String)transformedRecord.value(), "/foo/bar", "");
+        assertValue((String)transformedRecord.value(), "/foo/bar", "");
     }
 
     @Test
@@ -74,8 +78,7 @@ public class MaskJsonFieldTest {
         MaskJsonField maskJsonField = new MaskJsonField.Key();
         maskJsonField.configure(
                 ImmutableMap.of(
-                        MaskJsonFieldConfig.OUTER_FIELD_PATH, "/foo",
-                        MaskJsonFieldConfig.MASK_FIELD_NAME, "bar"
+                        MaskJsonFieldConfig.REPLACEMENT_FIELD_PATH, "/foo/bar"
                 )
         );
 
@@ -103,8 +106,8 @@ public class MaskJsonFieldTest {
 
         ConnectRecord transformedRecord = maskJsonField.apply(sinkRecord);
 
-        assertStringValue((String)transformedRecord.value(), "/foo/bar", "ssn");
-        assertStringValue((String)transformedRecord.key(), "/foo/bar", "");
+        assertValue((String)transformedRecord.value(), "/foo/bar", "ssn");
+        assertValue((String)transformedRecord.key(), "/foo/bar", "");
     }
 
     @Test
@@ -112,8 +115,7 @@ public class MaskJsonFieldTest {
         MaskJsonField maskJsonField = new MaskJsonField.Value();
         maskJsonField.configure(
                 ImmutableMap.of(
-                        MaskJsonFieldConfig.OUTER_FIELD_PATH, "/foo",
-                        MaskJsonFieldConfig.MASK_FIELD_NAME, "bar"
+                        MaskJsonFieldConfig.REPLACEMENT_FIELD_PATH, "/foo/bar"
                 )
         );
 
@@ -144,8 +146,7 @@ public class MaskJsonFieldTest {
         MaskJsonField maskJsonField = new MaskJsonField.Value();
         maskJsonField.configure(
                 ImmutableMap.of(
-                        MaskJsonFieldConfig.OUTER_FIELD_PATH, "/foo",
-                        MaskJsonFieldConfig.MASK_FIELD_NAME, "bar"
+                        MaskJsonFieldConfig.REPLACEMENT_FIELD_PATH, "/foo/bar"
                 )
         );
 
@@ -176,8 +177,7 @@ public class MaskJsonFieldTest {
         MaskJsonField maskJsonField = new MaskJsonField.Value();
         maskJsonField.configure(
                 ImmutableMap.of(
-                        MaskJsonFieldConfig.OUTER_FIELD_PATH, "/foo",
-                        MaskJsonFieldConfig.MASK_FIELD_NAME, "bar"
+                        MaskJsonFieldConfig.REPLACEMENT_FIELD_PATH, "/foo/bar"
                 )
         );
 
@@ -205,23 +205,41 @@ public class MaskJsonFieldTest {
 
     @Test
     public void testToplevelFieldInConnectKeyStruct() throws JsonProcessingException {
-        testToplevelFieldInConnectStructLib(true);
+        testToplevelFieldInConnectStructLib(true, "111-22-3333", "");
     }
 
     @Test
     public void testToplevelFieldInConnectValueStruct() throws JsonProcessingException {
-        testToplevelFieldInConnectStructLib(false);
+        testToplevelFieldInConnectStructLib(false, "111-22-3333", "");
     }
 
     @Test
+    public void testToplevelFieldInConnectValueStructInt() throws JsonProcessingException {
+        testToplevelFieldInConnectStructLib(false, 1234, 0);
+    }
 
-    private void testToplevelFieldInConnectStructLib(boolean isKey) throws JsonProcessingException {
+    @Test
+    public void testToplevelFieldInConnectValueStructBigIntMax() throws IOException {
+        testLib(
+                "{\"name\":\"john\",\"ssn\":" + Long.valueOf(Long.MAX_VALUE).toString() + "}",
+                "/ssn",
+                -1L,
+                "{\"name\":\"john\",\"ssn\":-1}"
+        );
+    }
+
+    @Test
+    public void testToplevelFieldInConnectValueStructFloat() throws JsonProcessingException {
+        testToplevelFieldInConnectStructLib(false, 1234.0, 0.0);
+    }
+
+    @Test
+    private void testToplevelFieldInConnectStructLib(boolean isKey, Object valueToReplace, Object expectedReplacement) throws JsonProcessingException {
         MaskJsonField maskJsonField = isKey ? new MaskJsonField.Key() : new MaskJsonField.Value();
         maskJsonField.configure(
                 ImmutableMap.of(
                         MaskJsonFieldConfig.CONNECT_FIELD_NAME, "document",
-                        MaskJsonFieldConfig.OUTER_FIELD_PATH, "",
-                        MaskJsonFieldConfig.MASK_FIELD_NAME, "ssn"
+                        MaskJsonFieldConfig.REPLACEMENT_FIELD_PATH, "/ssn"
                 )
         );
 
@@ -234,9 +252,16 @@ public class MaskJsonFieldTest {
                 .field("document", Schema.STRING_SCHEMA
                 ).schema();
 
+        String jsonPayloadTemplate = "{\"first_name\": \"john\", \"last_name\": \"doe\", \"ssn\": VALUE_TO_REPLACE}";
+        String jsonDocument = "";
+        if (valueToReplace.getClass() == String.class) {
+            jsonDocument = jsonPayloadTemplate.replace("VALUE_TO_REPLACE", "\"" + ((String) valueToReplace) + "\"");
+        } else {
+            jsonDocument = jsonPayloadTemplate.replace("VALUE_TO_REPLACE", valueToReplace.toString());
+        }
         Struct value = new Struct(valueSchema)
                 .put("database", "dynamo")
-                .put("document", "{\"first_name\": \"john\", \"last_name\": \"doe\", \"ssn\": \"122-12-1212\"}");
+                .put("document", jsonDocument);
 
         SinkRecord sinkRecord = null;
 
@@ -266,7 +291,7 @@ public class MaskJsonFieldTest {
 
         Struct data = isKey ? (Struct)transformedRecord.key(): (Struct)transformedRecord.value();
         String documentJson = data.getString("document");
-        assertStringValue(documentJson, "/ssn", "");
+        assertValue(documentJson, "/ssn", expectedReplacement);
     }
 
     @Test
@@ -275,8 +300,7 @@ public class MaskJsonFieldTest {
         maskJsonField.configure(
                 ImmutableMap.of(
                         MaskJsonFieldConfig.CONNECT_FIELD_NAME, "inner.document",
-                        MaskJsonFieldConfig.OUTER_FIELD_PATH, "",
-                        MaskJsonFieldConfig.MASK_FIELD_NAME, "ssn"
+                        MaskJsonFieldConfig.REPLACEMENT_FIELD_PATH, "/ssn"
                 )
         );
 
@@ -310,15 +334,23 @@ public class MaskJsonFieldTest {
 
         Struct data = (Struct)transformedRecord.value();
         String documentJson = data.getStruct("inner").getString("document");
-        assertStringValue(documentJson, "/ssn", "");
+        assertValue(documentJson, "/ssn", "");
     }
 
-    void assertStringValue(String jsonPayload, String path, String value) throws JsonProcessingException {
+    void assertValue(String jsonPayload, String path, Object value) throws JsonProcessingException {
         JsonNode root = mapper.readTree(jsonPayload);
         JsonPointer pointer = JsonPointer.compile(path);
         JsonNode targetNode = root.at(pointer);
 
-        Assertions.assertTrue(targetNode.isTextual() && targetNode.textValue().contentEquals(value), String.format("%s in %s = \"%s\" Actual=\"%s\"", path, jsonPayload, value, targetNode.textValue()));
+        if (value.getClass() == String.class) {
+            Assertions.assertTrue(targetNode.isTextual() && targetNode.textValue().equals(value), String.format("%s in %s = \"%s\" Actual=\"%s\"", path, jsonPayload, value, targetNode.textValue()));
+        } else if (value.getClass() == Integer.class) {
+            Assertions.assertTrue(Integer.valueOf(targetNode.intValue()).equals(value), String.format("%s in %s = \"%s\" Actual=\"%s\"", path, jsonPayload, value, targetNode.textValue()));
+        } else if (value.getClass() == Double.class) {
+            Assertions.assertTrue( Double.valueOf(targetNode.doubleValue()).equals(value), String.format("%s in %s = \"%s\" Actual=\"%s\"", path, jsonPayload, value, targetNode.textValue()));
+        } else if (value.getClass() == Float.class) {
+            Assertions.assertTrue(Float.valueOf(targetNode.floatValue()).equals(value), String.format("%s in %s = \"%s\" Actual=\"%s\"", path, jsonPayload, value, targetNode.textValue()));
+        }
     }
 
     @Test
@@ -380,5 +412,233 @@ public class MaskJsonFieldTest {
     @Test
     public void classLoadTest() throws ClassNotFoundException {
         Class clazz = Class.forName("io.github.ferozed.kafka.connect.transforms.MaskJsonField$Value");
+    }
+
+    @Test
+    public void testJsonPointer() throws Exception {
+        String payload = "{\"ssn\": \"111\"}";
+
+        JsonPointer pointer = JsonPointer.compile("/ssn");
+
+        JsonNode root = mapper.readTree(payload);
+
+        JsonNode targetNode = root.at(pointer);
+        JsonNode parentNode = root.at(pointer.head());
+
+        if (parentNode.isObject()) {
+            ((ObjectNode)parentNode).set(pointer.getMatchingProperty(), TextNode.valueOf(""));
+        }
+
+        System.out.println(mapper.writeValueAsString(root));
+    }
+
+    @Test
+    public void arrayTests() throws IOException {
+        testLib(
+                "{\"ssn\": \"111\"}",
+                "/ssn",
+                "",
+                "{\"ssn\":\"\"}"
+        );
+
+        testLib(
+                "{\"ssn\": \"111\"}",
+                "/ssn",
+                "_REDACTED_",
+                "{\"ssn\":\"_REDACTED_\"}"
+        );
+
+        // REPLACE WHOLE ARRAY
+        testLib(
+                "{\"ssn\": [\"111\",\"22\",\"3333\" ]}",
+                "/ssn",
+                "_REDACTED_",
+                "{\"ssn\":[]}"
+        );
+
+        testLib(
+                "{\"ssn\": [\"111\",\"22\",\"3333\" ]}",
+                "/ssn/2",
+                "_REDACTED_",
+                "{\"ssn\":[\"111\",\"22\",\"_REDACTED_\"]}"
+        );
+
+        // array in deep struct
+        testLib(
+                "{\"foo\":{\"bar\":{\"ssn\":[\"111\",\"22\",\"3333\"]}}}",
+                "/foo/bar/ssn/2",
+                "_REDACTED_",
+                "{\"foo\":{\"bar\":{\"ssn\":[\"111\",\"22\",\"_REDACTED_\"]}}}"
+        );
+
+        // array of int in deep struct
+        testLib(
+                "{\"foo\":{\"bar\":{\"ssn\":[111,22,3333]}}}",
+                "/foo/bar/ssn/2",
+                -1,
+                "{\"foo\":{\"bar\":{\"ssn\":[111,22,-1]}}}"
+        );
+
+        // array of float in deep struct
+        testLib(
+                "{\"oo\":{\"bar\":{\"ssn\":[111.1,22.2,3333.2]}}}",
+                "/oo/bar/ssn/2",
+                -1.1,
+                "{\"oo\":{\"bar\":{\"ssn\":[111.1,22.2,-1.1]}}}"
+        );
+
+    }
+
+    private void testLib(
+            String payload,
+            String path,
+            Object replacement,
+            String expectedJson
+    ) throws IOException {
+        MaskJsonField maskJsonField = new MaskJsonField.Value();
+
+        Map<String,Object> configs = new HashMap<>();
+
+        configs.put(MaskJsonFieldConfig.CONNECT_FIELD_NAME, "inner.document");
+        configs.put(MaskJsonFieldConfig.REPLACEMENT_FIELD_PATH, path);
+
+        if (replacement.getClass() == Integer.class) {
+            configs.put(MaskJsonFieldConfig.REPLACEMENT_VALUE_INT, (Integer)replacement);
+        }
+        else if (replacement.getClass() == Long.class) {
+            configs.put(MaskJsonFieldConfig.REPLACEMENT_VALUE_LONG, (Long)replacement);
+        }
+        else if (replacement.getClass() == Float.class) {
+            configs.put(MaskJsonFieldConfig.REPLACEMENT_VALUE_DOUBLE, Double.valueOf((Float)replacement));
+        }
+        else if (replacement.getClass() == Double.class) {
+            configs.put(MaskJsonFieldConfig.REPLACEMENT_VALUE_DOUBLE, (Double)replacement);
+        }
+        else if (replacement.getClass() == String.class) {
+            configs.put(MaskJsonFieldConfig.REPLACEMENT_VALUE_STRING, (String)replacement);
+        } else {
+            throw new RuntimeException("Unsupported value type: " + replacement.getClass());
+        }
+
+        maskJsonField.configure(configs);
+
+        Schema innerSchema = SchemaBuilder.struct()
+                .field("document", Schema.STRING_SCHEMA)
+                .schema();
+
+        Schema valueSchema = SchemaBuilder.struct()
+                .field("inner", innerSchema)
+                .field("database", Schema.STRING_SCHEMA
+                ).schema();
+
+        Struct value = new Struct(valueSchema)
+                .put("database", "dynamo")
+                .put("inner",
+                        new Struct(innerSchema)
+                                .put("document", payload)
+                );
+
+        SinkRecord sinkRecord = new SinkRecord(
+                "topic",
+                0,
+                SchemaBuilder.STRING_SCHEMA,
+                "key",
+                valueSchema,
+                value,
+                0
+        );
+
+        ConnectRecord transformedRecord = maskJsonField.apply(sinkRecord);
+
+        Struct data = (Struct)transformedRecord.value();
+        String replacedJson = data.getStruct("inner").getString("document");
+        //assertValue(replacedJson, path, replacement);
+
+        Assertions.assertEquals(expectedJson, replacedJson);
+    }
+    @Test
+    public void jsonPointerReplaceIntTest() throws IOException {
+        replaceWithPointerLib(
+                "{\"ssn\": \"111\"}",
+                "/ssn",
+                "",
+                "{\"ssn\":\"\"}"
+        );
+
+        replaceWithPointerLib(
+                "{\"ssn\": \"111\"}",
+                "/ssn",
+                "_REDACTED_",
+                "{\"ssn\":\"_REDACTED_\"}"
+        );
+
+        // REPLACE WHOLE ARRAY
+        replaceWithPointerLib(
+                "{\"ssn\": [\"111\",\"22\",\"3333\" ]}",
+                "/ssn",
+                "_REDACTED_",
+                "{\"ssn\":[]}"
+        );
+
+        replaceWithPointerLib(
+                "{\"ssn\": [\"111\",\"22\",\"3333\" ]}",
+                "/ssn/2",
+                "_REDACTED_",
+                "{\"ssn\":[\"111\",\"22\",\"_REDACTED_\"]}"
+        );
+    }
+
+    private void replaceWithPointerLib(
+            String payload,
+            String path,
+            Object replacement,
+            String expectedJson
+    ) throws IOException {
+        JsonNode replacementNode =
+                replaceWithPointer(
+                        payload,
+                        path,
+                        replacement
+                );
+
+        String replacedJson = mapper.writeValueAsString(replacementNode);
+
+        Assertions.assertEquals(expectedJson, replacedJson);
+    }
+
+    private JsonNode replaceWithPointer(
+            String payload,
+            String path,
+            Object replacement
+    ) throws IOException {
+        JsonPointer pointer = JsonPointer.compile(path);
+
+        JsonNode root = mapper.readTree(payload);
+
+        JsonNode targetNode = root.at(pointer);
+        JsonNode parentNode = root.at(pointer.head());
+
+        JsonNode replacementNode = null;
+        if (targetNode.isTextual()) {
+            replacementNode = TextNode.valueOf(replacement.toString());
+        } else if (targetNode.isInt()) {
+            replacementNode = IntNode.valueOf((Integer)replacement);
+        } else if (targetNode.isBigInteger()) {
+            replacementNode = BigIntegerNode.valueOf((BigInteger)replacement);
+        } else if (targetNode.isFloat()) {
+            replacementNode = FloatNode.valueOf((Float) replacement);
+        } else if (targetNode.isDouble()) {
+            replacementNode = DoubleNode.valueOf((Double) replacement);
+        } else if (targetNode.isArray()) {
+            replacementNode = mapper.createArrayNode();
+        }
+
+        if (parentNode.isObject()) {
+            ((ObjectNode)parentNode).set(pointer.getMatchingProperty(), replacementNode);
+        } else if (parentNode.isArray()) {
+            ((ArrayNode)parentNode).set(pointer.tail().getMatchingIndex(), replacementNode);
+        }
+
+        return root;
     }
 }

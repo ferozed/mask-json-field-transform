@@ -30,15 +30,9 @@ For eg:
 
 ### Configuration
 
-*OUTER_FIELD_PATH*
+*REPLACEMENT_FIELD_PATH*
 
-[JsonPointer](https://www.rfc-editor.org/rfc/rfc6901) path to the outer field in json payload
-
-> OUTER_FIELD_PATH should be set to empty string, if the field is at root level.
-
-*MASK_FIELD_NAME*
-
-Name of the field whose value needs to be masked
+[JsonPointer](https://datatracker.ietf.org/doc/html/rfc6901) of the field whose value needs to be masked.
 
 *CONNECT_FIELD_NAME*
 
@@ -47,6 +41,49 @@ The name of the field in the connect record from which the JSON payload needs to
 > CONNECT_FIELD_NAME is optional. It is only specified for struct types, i.e when the data is in AVRO format.
 > 
 > If the data is in STRING format, then it is not used.
+>
+
+*REPLACEMENT_VALUE_STRING*
+
+The string that will be used as replacement value.
+
+- Requirement: Optional
+- Default Value: ""
+
+*REPLACEMENT_VALUE_INT*
+
+The integer that will be used as replacement value.
+
+- Requirement: Optional
+- Default Value: 0
+
+*REPLACEMENT_VALUE_LONG*
+
+The long that will be used as replacement value.
+
+- Requirement: Optional
+- Default Value: 0
+
+*REPLACEMENT_VALUE_DOUBLE*
+
+The double that will be used as replacement value.
+
+- Requirement: Optional
+- Default Value: 0.0
+
+## Field Replacement
+
+The fields are replaced depending on the type of the JsonNode parsed. If the parsed node
+is an `IntNode` then the `REPLACEMENT_VALUE_INT` is used to replace it.
+
+The following show the mappings from the Json Node type to the config value that is used for replacement.
+
+- IntNode ->  `REPLACEMENT_VALUE_INT`
+- LongNode -> `REPLACEMENT_VALUE_LONG`
+- TextNode -> `REPLACEMENT_VALUE_STRING`
+- FloatNode -> `REPLACEMENT_VALUE_DOUBLE`
+- DoubleNode -> `REPLACEMENT_VALUE_DOUBLE`
+
 
 # Examples
 
@@ -67,8 +104,7 @@ in the connect record, without using AVRO.
 ```
 "transforms": "mask_json_field",
 "transforms.mask_json_field.type": "io.github.ferozed.kafka.connect.transforms.MaskJsonField$Value",
-"transforms.mask_json_field.OUTER_FIELD_PATH": "",
-"transforms.mask_json_field.MASK_FIELD_NAME": "ssn",
+"transforms.mask_json_field.REPLACEMENT_FIELD_PATH": "/ssn",
 ```
 
 *INPUT*
@@ -83,6 +119,55 @@ in the connect record, without using AVRO.
 { "name": "jon", "ssn": "" }
 ```
 
+### Remove value from array in toplevel JSON field
+
+*Kafka Connector Config*
+
+
+```
+"transforms": "mask_json_field",
+"transforms.mask_json_field.type": "io.github.ferozed.kafka.connect.transforms.MaskJsonField$Value",
+"transforms.mask_json_field.REPLACEMENT_FIELD_PATH": "/ssn/2",
+```
+
+*INPUT*
+
+```
+{ "name": "jon", "ssn": ["111, "22", "1212"] }
+```
+
+*OUTPUT*
+
+```
+{ "name": "jon", "ssn": ["111, "22", ""] }
+```
+
+### Remove multiple value from array in toplevel JSON field
+
+*Kafka Connector Config*
+
+
+```
+"transforms": "mask_ssn_0,mask_ssn_1",
+"transforms.mask_ssn_0.type": "io.github.ferozed.kafka.connect.transforms.MaskJsonField$Value",
+"transforms.mask_ssn_0.REPLACEMENT_FIELD_PATH": "/ssn/0",
+"transforms.mask_ssn_0.REPLACEMENT_VALUE_STRING": "xxx",
+"transforms.mask_ssn_1.type": "io.github.ferozed.kafka.connect.transforms.MaskJsonField$Value",
+"transforms.mask_ssn_1.REPLACEMENT_FIELD_PATH": "/ssn/1",
+"transforms.mask_ssn_1.REPLACEMENT_VALUE_STRING": "xx",
+```
+
+*INPUT*
+
+```
+{ "name": "jon", "ssn": ["111, "22", "1212"] }
+```
+
+*OUTPUT*
+
+```
+{ "name": "jon", "ssn": ["xxx, "xx", "1212"] }
+```
 
 ### Remove value from nested JSON field
 
@@ -91,8 +176,7 @@ in the connect record, without using AVRO.
 ```
 "transforms": "mask_json_field",
 "transforms.mask_json_field.type": "io.github.ferozed.kafka.connect.transforms.MaskJsonField$Value",
-"transforms.mask_json_field.OUTER_FIELD_PATH": "/user_info",
-"transforms.mask_json_field.MASK_FIELD_NAME": "ssn",
+"transforms.mask_json_field.REPLACEMENT_FIELD_PATH": "/user_info/ssn",
 ```
 
 *INPUT*
@@ -167,8 +251,7 @@ in the connect record, without using AVRO.
 ```
 "transforms": "mask_json_field",
 "transforms.mask_json_field.type": "io.github.ferozed.kafka.connect.transforms.MaskJsonField$Value",
-"transforms.mask_json_field.OUTER_FIELD_PATH": "",
-"transforms.mask_json_field.MASK_FIELD_NAME": "ssn",
+"transforms.mask_json_field.REPLACEMENT_FIELD_PATH": "/ssn",
 "transforms.mask_json_field.CONNECT_FIELD_NAME": "private_info.data"
 ```
 

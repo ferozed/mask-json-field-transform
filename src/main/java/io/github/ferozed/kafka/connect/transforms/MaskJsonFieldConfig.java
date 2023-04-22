@@ -24,9 +24,13 @@ import java.util.Map;
 
 public class MaskJsonFieldConfig extends AbstractConfig {
 
-    public static final String OUTER_FIELD_PATH = "OUTER_FIELD_PATH";
-    public static final String MASK_FIELD_NAME = "MASK_FIELD_NAME";
+    public static final String REPLACEMENT_FIELD_PATH = "REPLACEMENT_FIELD_PATH";
     public static final String CONNECT_FIELD_NAME = "CONNECT_FIELD_NAME";
+
+    public static final String REPLACEMENT_VALUE_STRING = "REPLACEMENT_VALUE_STRING";
+    public static final String REPLACEMENT_VALUE_INT = "REPLACEMENT_VALUE_INT";
+    public static final String REPLACEMENT_VALUE_LONG = "REPLACEMENT_VALUE_LONG";
+    public static final String REPLACEMENT_VALUE_DOUBLE = "REPLACEMENT_VALUE_DOUBLE";
 
     /**
      * Construct a configuration with a ConfigDef and the configuration properties,
@@ -43,18 +47,10 @@ public class MaskJsonFieldConfig extends AbstractConfig {
     public static ConfigDef config() {
         return new ConfigDef()
                 .define(
-                        ConfigKeyBuilder.of(OUTER_FIELD_PATH, ConfigDef.Type.STRING)
-                                .documentation("JsonPointer to outer field")
+                        ConfigKeyBuilder.of(REPLACEMENT_FIELD_PATH, ConfigDef.Type.STRING)
+                                .documentation("JsonPointer to replacement field")
                                 .defaultValue(Schema.Type.STRING.toString())
                                 .validator(new ConfigDef.NonNullValidator())
-                                .importance(ConfigDef.Importance.HIGH)
-                                .build()
-                )
-                .define(
-                        ConfigKeyBuilder.of(MASK_FIELD_NAME, ConfigDef.Type.STRING)
-                                .documentation("Name of the field to be masked.")
-                                .defaultValue(Schema.Type.STRING.toString())
-                                .validator(new ConfigDef.NonEmptyString())
                                 .importance(ConfigDef.Importance.HIGH)
                                 .build()
                 )
@@ -64,6 +60,35 @@ public class MaskJsonFieldConfig extends AbstractConfig {
                                 .importance(ConfigDef.Importance.LOW)
                                 .defaultValue("")
                                 .build()
-                );
+                )
+                .define(
+                        ConfigKeyBuilder.of(REPLACEMENT_VALUE_STRING, ConfigDef.Type.STRING)
+                                .documentation("The string value that should be used to replace.")
+                                .importance(ConfigDef.Importance.LOW)
+                                .defaultValue("")
+                                .build()
+                )
+                .define(
+                        ConfigKeyBuilder.of(REPLACEMENT_VALUE_INT, ConfigDef.Type.INT)
+                                .documentation("The string value that should be used to replace.")
+                                .importance(ConfigDef.Importance.LOW)
+                                .defaultValue(0)
+                                .build()
+                )
+                .define(
+                        ConfigKeyBuilder.of(REPLACEMENT_VALUE_LONG, ConfigDef.Type.LONG)
+                                .documentation("The long value that should be used to replace.")
+                                .importance(ConfigDef.Importance.LOW)
+                                .defaultValue(0L)
+                                .build()
+                )
+                .define(
+                        ConfigKeyBuilder.of(REPLACEMENT_VALUE_DOUBLE, ConfigDef.Type.DOUBLE)
+                                .documentation("The long value that should be used to replace.")
+                                .importance(ConfigDef.Importance.LOW)
+                                .defaultValue(0.0)
+                                .build()
+                )
+                ;
     }
 }
