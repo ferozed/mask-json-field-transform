@@ -1,5 +1,5 @@
 /**
- * Copyright © 2022 Feroze Daud (ferozed DOT oss AT gmail.com)
+ * Copyright © 2023 Feroze Daud (ferozed DOT oss AT gmail.com)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package io.github.ferozed.kafka.connect.transforms;
 
 import com.fasterxml.jackson.core.JsonPointer;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.*;
@@ -30,7 +31,9 @@ import org.apache.kafka.connect.header.Headers;
 
 import java.io.IOException;
 import java.math.BigInteger;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static io.github.ferozed.kafka.connect.transforms.MaskJsonFieldConfig.*;
 
@@ -210,6 +213,8 @@ public class MaskJsonField<R extends ConnectRecord<R>> extends BaseTransformatio
             replacementNode = DoubleNode.valueOf(config.getDouble(REPLACEMENT_VALUE_DOUBLE));
         } else if (targetNode.isArray()) {
             replacementNode = mapper.createArrayNode();
+        } else if (targetNode.isObject()) {
+            replacementNode = mapper.createObjectNode();
         }
 
         if (parentNode.isObject()) {
@@ -221,6 +226,48 @@ public class MaskJsonField<R extends ConnectRecord<R>> extends BaseTransformatio
         return root;
     }
 
+    /***
+     * THis function handles the case when you have json data with no schema.
+     * For eg, if you use `JsonConverter` with `schemas.enable=false`
+     *
+     * In this case, the `schema` field in connect record will be null,
+     * and the value field will be a %lt;String,Object&gt;
+     *
+     * TODO:
+     *     Need to add support for embedded json strings in the map.
+     *     in that case, use `connect.field.name` to get the embedded json
+     *     from the map. Then apply logic on that string.
+     * @param record
+     * @param input
+     * @return
+     */
+    @Override
+    protected SchemaAndValue processMap(R record, Map<String, Object> value) {
+        Map<String, Object> input = value;
+        String [] tokens = connectFieldName.split("\\.");
+        try {
+            for(int i = 0; i < tokens.length; i++) {
+                String field = tokens[i];
+
+                if (i == tokens.length - 1) {
+                    String json = (String)input.get(field);
+                    JsonNode replacement = replaceWithPointer(json, this.replacementFieldPath);
+                    input.put(field, mapper.writeValueAsString(replacement));
+                } else {
+                    input = (Map<String,Object>)input.get(field);
+                }
+            }
+        } catch (JsonProcessingException e) {
+            //throw new RuntimeException(e);
+        } catch (IOException e) {
+            //throw new RuntimeException(e);
+        }
+
+        return new SchemaAndValue(
+                isKey ? record.keySchema() : record.valueSchema(),
+                value);
+    }
+
     public static class Key<R extends ConnectRecord<R>> extends MaskJsonField<R> {
         public Key() {
             super(true);
@@ -230,6 +277,35 @@ public class MaskJsonField<R extends ConnectRecord<R>> extends BaseTransformatio
     public static class Value<R extends ConnectRecord<R>> extends MaskJsonField<R> {
         public Value() {
             super(false);
+        }
+    }
+
+    interface IPropertyGetter {
+        String getString(String field);
+
+        public class StructPropertyGetter implements IPropertyGetter {
+
+            Struct struct;
+            public StructPropertyGetter(Struct struct) {
+                this.struct = struct;
+            }
+
+            @Override
+            public String getString(String field) {
+                return this.struct.getString(field);
+            }
+        }
+
+        public class MapPropertyGetter implements IPropertyGetter {
+
+            Map<String,String> map;
+            public MapPropertyGetter(Map<String,String> map) {
+                this.map = map;
+            }
+            @Override
+            public String getString(String field) {
+                return map.get(field);
+            }
         }
     }
 
