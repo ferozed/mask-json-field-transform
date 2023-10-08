@@ -112,7 +112,7 @@ public class MaskJsonField<R extends ConnectRecord<R>> extends BaseTransformatio
     /**
      * Configure this class with the given key-value pairs
      *
-     * @param configs
+     * @param configs Config map
      */
     @Override
     public void configure(Map<String, ?> configs) {
@@ -233,13 +233,9 @@ public class MaskJsonField<R extends ConnectRecord<R>> extends BaseTransformatio
      * In this case, the `schema` field in connect record will be null,
      * and the value field will be a %lt;String,Object&gt;
      *
-     * TODO:
-     *     Need to add support for embedded json strings in the map.
-     *     in that case, use `connect.field.name` to get the embedded json
-     *     from the map. Then apply logic on that string.
-     * @param record
-     * @param input
-     * @return
+     * @param record ConnectRecord
+     * @param value Kafka topic record as a map.
+     * @return SchemaAndValue after processing
      */
     @Override
     protected SchemaAndValue processMap(R record, Map<String, Object> value) {
