@@ -1,3 +1,10 @@
+# 1.1
+
+Added support for `map`. Usually, the SMT will get map as an input when the connector is using a `JsonConverter` with `schemas.enable`=`false`.
+
+# 1.0
+
+Release version. No changes from 0.3
 
 # 0.3
 
